@@ -60,8 +60,10 @@ int GPUDevice::init() {
 	}
 
 	res = nvmlDeviceGetDriverModel(handle, &dmCurrent, &dmPending);
-	checkError(res);
 
+	if(res != NVML_SUCCESS) {
+		printf("%s[%d] ERROR: Could not obtain Driver Model\n", __FUNCTION__, __LINE__);
+	}
 	return update();
 }
 
@@ -163,8 +165,7 @@ int DeviceManager::update() {
 //NVML_DEVICE_NAME_BUFFER_SIZE
 void DeviceManager::print() {
 	std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-	char hrTime[256];
-	ctime_s(hrTime, 256, &time);
+	char *hrTime = hrTime = ctime(&time);
 	printf ("%s", hrTime);
 	printf("+-----------------------------------------------------------------------------+\n");
 	printf("|             NVidia driver version: %s       Device count : %2d           |\n", driverVersion.c_str(), numDevices);
@@ -181,16 +182,16 @@ void GPUDevice::print() {
 	std::string driverMode = (dmCurrent == NVML_DRIVER_WDDM) ? "WDDM" : "TCC ";
 	char fan[10];
 	if (fanSpeed != unsigned(-1)) {
-		sprintf_s(fan, " %3d%%" , fanSpeed);
+		snprintf(fan, 10, " %3d%%" , fanSpeed);
 	} else {
-		sprintf_s(fan, " N/A ");
+		snprintf(fan, 10, " N/A ");
 	}
 
 	char pow[10];
 	if (power != unsigned(-1)) {
-		sprintf_s(pow, " %3dW" , power);
+		snprintf(pow, 10, " %3dW" , power);
 	} else {
-		sprintf_s(pow, " N/A ");
+		snprintf(pow, 10, " N/A ");
 	}
 
 	printf("| %2d %s  %s | %5d / %5d | %3dC %s   %s   %3d%% |\n", 
@@ -218,18 +219,8 @@ void moveCursorTo( int x, int y ) {
 }
 
 #else //!_WIN32
-
-#include <unistd.h>
-#include <term.h>
 void moveCursorTo( int x, int y ) {
-	int err;
-	if (!cur_term) {
-		if (setupterm( NULL, STDOUT_FILENO, &err ) < 0) {
-			return;
-		}
-	}
-	putp(tigetstr("clear"));
-	putp(tparm(tigetstr("cup"), y, x, 0, 0, 0, 0, 0, 0, 0 ));
+	printf("\033[%d;%dH", y+1, x+1);
 }
 #endif //!_WIN32
 
